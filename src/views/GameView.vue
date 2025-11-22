@@ -25,7 +25,7 @@ const EVENT_PLAYER_STARTED_DRAWING = 6
 const EVENT_PLAYER_HAS_GUESSED_THE_WORD = 7
 // const EVENT_TURN_SUMMARY = 8 (Handled via SERIAL_TURN_SUMMARY usually)
 // const EVENT_NEXT_ROUND = 9
-const EVENT_LEADERBOARD = 10 // <--- 1. Added missing event ID
+const EVENT_LEADERBOARD = 10 
 
 // --- State ---
 const route = useRoute()
@@ -53,8 +53,9 @@ const turnResults = ref<RoundResult[]>([])
 const chatMessages = ref<any[]>([])
 const wordChoices = ref<string[]>([])
 const showTurnSummary = ref(false)
-const showLeaderboard = ref(false) // <--- 2. New State for Leaderboard
-const isGameEnded = ref(false)     // <--- 3. Flag to prevent error message on close
+const showLeaderboard = ref(false)
+const isGameEnded = ref(false)
+const hasGameStarted = ref(false)
 const isMyTurnToDraw = ref(false)
 
 const currentColor = ref('#000000')
@@ -167,10 +168,15 @@ const connect = () => {
         isConnected.value = false
         console.log("Socket closed:", event.code, event.reason)
 
-        // 4. Check if the game ended naturally before showing errors
         if (isGameEnded.value) {
             statusMessage.value = "Game Over"
             return 
+        }
+
+        if (hasGameStarted.value) {
+            statusMessage.value = "Game Ended"
+            pushSystemMessage("Game ended as all players except you have left.")
+            return
         }
 
         if (event.reason === "room-not-found") {
@@ -194,6 +200,7 @@ const handleEvent = (payload: Uint8Array) => {
 
     switch (event.type) {
         case EVENT_GAME_STARTED:
+            hasGameStarted.value = true 
             showTurnSummary.value = false
             statusMessage.value = 'Game started!'
             pushSystemMessage('Game started! 🚀')
@@ -249,11 +256,10 @@ const handleEvent = (payload: Uint8Array) => {
             pushSystemMessage(`${event.data} guessed it! 🎉`)
             break
         
-        // 5. Handle Leaderboard Event
         case EVENT_LEADERBOARD:
-            isGameEnded.value = true // Mark game as naturally ended
+            isGameEnded.value = true 
             showTurnSummary.value = false
-            showLeaderboard.value = true // Trigger the UI
+            showLeaderboard.value = true 
             statusMessage.value = "Game Over! 🏆"
             pushSystemMessage("Game Over! Check the leaderboard! 🏆")
             break
@@ -491,11 +497,21 @@ onUnmounted(() => {
 
                     <div v-if="wordChoices.length > 0"
                         class="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 rounded-lg">
-                        <div class="bg-gray-800 p-8 rounded-lg shadow-xl">
-                            <h2 class="text-2xl font-bold text-center mb-6">Choose a word:</h2>
+                        <div class="bg-gray-800 p-8 rounded-lg shadow-xl border border-gray-700">
+                            <h2 class="text-2xl font-bold text-center mb-2">Choose a word:</h2>
+                            <p class="text-center text-gray-400 mb-6 text-sm animate-pulse">⏳ 10s to choose</p>
+                            
                             <div class="flex space-x-4">
                                 <button v-for="(word, index) in wordChoices" :key="word" @click="sendWordChoice(index)"
-                                    class="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold transition">
+                                    class="relative px-6 py-3 rounded-lg font-bold transition flex flex-col items-center"
+                                    :class="index === 0 
+                                        ? 'bg-blue-700 ring-2 ring-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.5)] scale-105' 
+                                        : 'bg-blue-600 hover:bg-blue-700'">
+                                    
+                                    <span v-if="index === 0" class="absolute -top-3 bg-yellow-500 text-black text-[10px] px-2 rounded-full font-bold uppercase tracking-wide shadow-sm border border-yellow-600">
+                                        Default
+                                    </span>
+                                    
                                     {{ word }}
                                 </button>
                             </div>
@@ -504,37 +520,43 @@ onUnmounted(() => {
 
                 </div>
 
-                <div class="bg-gray-800 p-4 rounded-lg shadow-md mt-4 flex items-center gap-4"
-                    :class="{ 'opacity-50 pointer-events-none': !isMyTurnToDraw }">
-                    <input type="color" v-model="currentColor" @change="updateSettings"
-                        class="w-10 h-10 bg-transparent cursor-pointer">
-
-                    <div class="flex flex-col grow">
-                        <label class="text-xs text-gray-400">Size: {{ currentSize }}</label>
-                        <input type="range" v-model.number="currentSize" @input="updateSettings" min="1" max="20"
-                            class="w-full accent-blue-500">
+                <div class="mt-4">
+                    <div v-if="isMyTurnToDraw && wordChoices.length === 0" class="mb-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-center shadow-lg animate-pulse mx-auto w-fit">
+                        🎨 You have 80s to draw!
                     </div>
 
-                    <div class="flex bg-gray-700 rounded-lg p-1">
-                        <button @click="() => { currentMode = 'drawing'; updateSettings() }"
-                            class="px-3 py-1 text-sm font-bold rounded transition"
-                            :class="currentMode === 'drawing' ? 'bg-blue-600 text-white shadow' : 'text-gray-400'">
-                            Draw
-                        </button>
-                        <button @click="() => { currentMode = 'filling'; updateSettings() }"
-                            class="px-3 py-1 text-sm font-bold rounded transition"
-                            :class="currentMode === 'filling' ? 'bg-blue-600 text-white shadow' : 'text-gray-400'">
-                            Fill
-                        </button>
-                    </div>
+                    <div class="bg-gray-800 p-4 rounded-lg shadow-md flex items-center gap-4"
+                        :class="{ 'opacity-50 pointer-events-none': !isMyTurnToDraw }">
+                        <input type="color" v-model="currentColor" @change="updateSettings"
+                            class="w-10 h-10 bg-transparent cursor-pointer">
 
-                    <div class="border-l border-gray-600 pl-4 flex gap-2">
-                        <button @click="undo" class="p-2 text-gray-300 hover:bg-gray-700 rounded"
-                            title="Undo">↩️</button>
-                        <button @click="redo" class="p-2 text-gray-300 hover:bg-gray-700 rounded"
-                            title="Redo">↪️</button>
-                        <button @click="clear" class="p-2 text-red-400 hover:bg-red-900/30 rounded"
-                            title="Clear">🗑️</button>
+                        <div class="flex flex-col grow">
+                            <label class="text-xs text-gray-400">Size: {{ currentSize }}</label>
+                            <input type="range" v-model.number="currentSize" @input="updateSettings" min="1" max="20"
+                                class="w-full accent-blue-500">
+                        </div>
+
+                        <div class="flex bg-gray-700 rounded-lg p-1">
+                            <button @click="() => { currentMode = 'drawing'; updateSettings() }"
+                                class="px-3 py-1 text-sm font-bold rounded transition"
+                                :class="currentMode === 'drawing' ? 'bg-blue-600 text-white shadow' : 'text-gray-400'">
+                                Draw
+                            </button>
+                            <button @click="() => { currentMode = 'filling'; updateSettings() }"
+                                class="px-3 py-1 text-sm font-bold rounded transition"
+                                :class="currentMode === 'filling' ? 'bg-blue-600 text-white shadow' : 'text-gray-400'">
+                                Fill
+                            </button>
+                        </div>
+
+                        <div class="border-l border-gray-600 pl-4 flex gap-2">
+                            <button @click="undo" class="p-2 text-gray-300 hover:bg-gray-700 rounded"
+                                title="Undo">↩️</button>
+                            <button @click="redo" class="p-2 text-gray-300 hover:bg-gray-700 rounded"
+                                title="Redo">↪️</button>
+                            <button @click="clear" class="p-2 text-red-400 hover:bg-red-900/30 rounded"
+                                title="Clear">🗑️</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -545,10 +567,13 @@ onUnmounted(() => {
                 <div ref="chatBox"
                     class="grow overflow-y-auto mb-3 space-y-2 pr-2 scrollbar-thin scrollbar-thumb-gray-600">
                     <div v-for="(msg, index) in chatMessages" :key="index" class="text-sm">
+                        
                         <div v-if="msg.isSystem" class="text-center my-2">
-                            <span class="text-xs bg-gray-700 text-blue-300 px-2 py-1 rounded-full">{{ msg.content
-                                }}</span>
+                            <span class="inline-block text-xs bg-gray-700 text-blue-300 px-2 py-1 rounded-lg max-w-full wrap-break-word">
+                                {{ msg.content }}
+                            </span>
                         </div>
+
                         <div v-else>
                             <span class="font-bold" :class="msg.from === 'You' ? 'text-yellow-400' : 'text-blue-400'">{{
                                 msg.from }}:</span>
@@ -557,10 +582,10 @@ onUnmounted(() => {
                     </div>
                 </div>
 
-                <form @submit.prevent="sendChatMessage" class="flex gap-2">
+                <form @submit.prevent="sendChatMessage" class="flex gap-2 items-center">
                     <input v-model="chatInput" type="text" placeholder="Guess or chat..."
-                        class="grow px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-blue-500" />
-                    <button type="submit" class="bg-blue-600 px-3 rounded hover:bg-blue-500">➤</button>
+                        class="grow min-w-0 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-blue-500" />
+                    <button type="submit" class="shrink-0 w-10 h-10 flex items-center justify-center bg-blue-600 rounded hover:bg-blue-500 text-white">➤</button>
                 </form>
             </div>
 
