@@ -63,14 +63,14 @@ export class Dende {
     private width: number;
     private height: number;
     private ctx: CanvasRenderingContext2D;
-    
+
     private isDrawing: boolean = false;
     private mode: DendeMode = "drawing";
     private delay: number = 33;
-    
+
     // CHANGED: Listener now expects the Interface
     private partListeners: Array<(p: IDendePart) => any> = [];
-    
+
     private pointsBuffer: Array<number> = [];
     private lastSent: number = Date.now();
     private otherStartedDrawing: boolean = false;
@@ -227,7 +227,7 @@ export class Dende {
     }
 
     private flushBuffer(isEnding: boolean) {
-        if (this.mode !== "drawing" || this.pointsBuffer.length === 0) return;
+        if (this.mode !== "drawing") return;
 
         // We create a class instance here, but it matches the Interface perfectly
         const part = new DendePart();
@@ -302,6 +302,7 @@ export class Dende {
         this.isDrawing = false
         this.otherStartedDrawing = false;
         this.mode = "drawing"
+        this.enableDrawing()
         this.undoStack = []
         this.redoStack = []
         this.saveSnapshot()
@@ -316,22 +317,24 @@ export class Dende {
     // CHANGED: Accepts Interface (Crucial for WebSocket data)
     public putPart(part: IDendePart) {
         if (this.canDraw) return;
-        
-        // The logic remains the same, but now TS knows 'part' acts like IDendePart
+
         switch (part.type) {
             case DendePartType.Clear: {
+                this.redoStack = []
                 this.ctx.clearRect(0, 0, this.width, this.height);
                 this.saveSnapshot();
                 break;
             }
 
             case DendePartType.Filling: {
+                this.redoStack = []
                 this._fillAtPoint(part.coordinates[0]!, part.coordinates[1]!, part.color);
                 this.saveSnapshot();
                 break;
             }
 
             case DendePartType.Drawing: {
+                this.redoStack = []
                 const [r, g, b, a] = part.color;
 
                 this.ctx.strokeStyle = `rgba(${r},${g},${b},${a})`;
@@ -342,17 +345,23 @@ export class Dende {
                 if (!this.otherStartedDrawing) {
                     this.otherStartedDrawing = true;
                     this.ctx.beginPath();
+                    // Start at the first point
                     this.ctx.moveTo(part.coordinates[0]!, part.coordinates[1]!);
                     this.ctx.lineTo(part.coordinates[0]!, part.coordinates[1]!);
-                    this.ctx.stroke()
-                }
+                    this.ctx.stroke();
 
-                if (part.coordinates.length >= 2) {
+                    // Loop starts at 2 because 0 is handled by moveTo
                     for (let i = 2; i < part.coordinates.length; i += 2) {
                         this.ctx.lineTo(part.coordinates[i]!, part.coordinates[i + 1]!);
                     }
-                    this.ctx.stroke();
+                } else {
+                    // If continuing a line, simply connect to ALL new points
+                    // Loop starts at 0
+                    for (let i = 0; i < part.coordinates.length; i += 2) {
+                        this.ctx.lineTo(part.coordinates[i]!, part.coordinates[i + 1]!);
+                    }
                 }
+                this.ctx.stroke();
 
                 if (part.isLineEnd) {
                     this.saveSnapshot();
@@ -401,13 +410,13 @@ export class Dende {
     }
 
     setLineWidth(lineWidth: number) {
-        this.myLineWidth = lineWidth; 
-        this.ctx.lineWidth = lineWidth; 
+        this.myLineWidth = lineWidth;
+        this.ctx.lineWidth = lineWidth;
     }
 
     setLineColorRGBA(r: number, g: number, b: number, a: number = 1) {
         this.myColorRGBA = [r, g, b, a];
-        this.ctx.strokeStyle = `rgba(${r},${g},${b},${a})`; 
+        this.ctx.strokeStyle = `rgba(${r},${g},${b},${a})`;
     }
 
     setFPS(fps: number) {
