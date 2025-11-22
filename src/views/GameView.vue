@@ -1,28 +1,33 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { API_BASE_URL } from '../config'
 import { Dende, type IDendePart, DendePartType } from '../dende'
 import { DrawingData } from '../proto/drawing'
-// You must generate this file from your serialization.proto using ts-proto
-// If you haven't, you'll need to define these types manually.
 import { Event, Message, WordChoice, TurnSummary } from '../proto/serialization'
+
+const router = useRouter()
 
 // --- Constants ---
 const SERIAL_EVENT = 0
 const SERIAL_MESSAGE = 1
-const SERIAL_DRAWING = 2 // Maps to DrawingData (includes Draw, Fill, Clear)
+const SERIAL_DRAWING = 2 
 const SERIAL_WORD_CHOICE = 3
 const SERIAL_TURN_SUMMARY = 4
-// const SERIAL_CLEAR_CANVAS = 5 // Deprecated in favor of DrawingData.type = Clear
+const SERIAL_INITIAL_PLAYERS_AND_SCORES = 5 // <--- New Constant
 
 // --- Event Types ---
 const EVENT_PLAYER_JOINED = 0
+const EVENT_PLAYER_RECONNECTED = 1
 const EVENT_PLAYER_LEFT = 2
 const EVENT_PlAYER_CHOOSING_WORD = 3
 const EVENT_GAME_STARTED = 4
 const EVENT_PLEASE_CHOOSE_WORD = 5
 const EVENT_PLAYER_STARTED_DRAWING = 6
 const EVENT_PLAYER_HAS_GUESSED_THE_WORD = 7
+const EVENT_TURN_SUMMARY = 8
+const EVENT_NEXT_ROUND = 9
+const EVENT_LEADERBOARD = 10 
 
 // --- State ---
 const dendeContainer = ref<HTMLElement | null>(null)
@@ -38,10 +43,24 @@ interface Player {
   score: number
   guessed: boolean
 }
+
+interface TurnResult {
+  username: string
+  score: number
+  diff: number
+}
+
 const players = ref<Player[]>([])
-const chatMessages = ref<any[]>([]) // Type depends on your Message proto
+
+const sortedPlayers = computed(() => {
+  return [...players.value].sort((a, b) => b.score - a.score)
+})
+
+const chatMessages = ref<any[]>([]) 
 const wordChoices = ref<string[]>([])
 const showTurnSummary = ref(false)
+const showLeaderboard = ref(false) 
+const turnResults = ref<TurnResult[]>([]) 
 const isMyTurnToDraw = ref(false)
 
 // UI State
@@ -99,8 +118,6 @@ const connect = () => {
       const type = data[data.length - 1]
       const payload = data.subarray(0, data.length - 1)
 
-      showTurnSummary.value = false // Hide summary on activity
-
       switch (type) {
         case SERIAL_EVENT:
           handleEvent(payload)
@@ -113,6 +130,9 @@ const connect = () => {
           break
         case SERIAL_TURN_SUMMARY:
           handleTurnSummary(payload)
+          break
+        case SERIAL_INITIAL_PLAYERS_AND_SCORES: // <--- Handle new type
+          handleInitialPlayers(payload)
           break
         default:
           console.warn("Unknown serial type:", type)
@@ -138,11 +158,17 @@ const handleEvent = (payload: Uint8Array) => {
     case EVENT_GAME_STARTED:
       statusMessage.value = 'Game started!'
       pushSystemMessage('Game started! 🚀')
+      showTurnSummary.value = false 
       break
 
     case EVENT_PLAYER_JOINED:
       addPlayerIfNeeded(event.data)
       pushSystemMessage(`${event.data} joined!`)
+      break
+
+    case EVENT_PLAYER_RECONNECTED: 
+      addPlayerIfNeeded(event.data)
+      pushSystemMessage(`${event.data} reconnected.`)
       break
 
     case EVENT_PLAYER_LEFT:
@@ -155,30 +181,32 @@ const handleEvent = (payload: Uint8Array) => {
       statusMessage.value = `${event.data} is choosing...`
       isMyTurnToDraw.value = false
       dende?.disableDrawing()
-      dende?.clear() // Clear board for new round
+      dende?.clear() 
       pushSystemMessage(`${event.data} is choosing a word...`)
+      showTurnSummary.value = false 
       break
 
     case EVENT_PLEASE_CHOOSE_WORD:
       statusMessage.value = 'Your turn! Choose a word:'
-      // Assuming event.data is "Word1:Word2:Word3"
       wordChoices.value = event.data.split(':')
       isMyTurnToDraw.value = true
+      showTurnSummary.value = false 
       break
 
     case EVENT_PLAYER_STARTED_DRAWING:
       addPlayerIfNeeded(event.data)
       statusMessage.value = `${event.data} is drawing!`
-      wordChoices.value = [] // clear modal
-      dende?.clear() // Start fresh
+      wordChoices.value = [] 
+      dende?.clear() 
 
       if (isMyTurnToDraw.value) {
         dende?.enableDrawing()
-        updateSettings() // Re-apply current color/size
+        updateSettings() 
       } else {
         dende?.disableDrawing()
       }
       pushSystemMessage(`${event.data} is drawing!`)
+      showTurnSummary.value = false 
       break
 
     case EVENT_PLAYER_HAS_GUESSED_THE_WORD:
@@ -186,6 +214,15 @@ const handleEvent = (payload: Uint8Array) => {
       const p = players.value.find(p => p.username === event.data)
       if (p) p.guessed = true
       pushSystemMessage(`${event.data} guessed it! 🎉`)
+      break
+
+    case EVENT_LEADERBOARD: 
+      statusMessage.value = "Game Over!"
+      showLeaderboard.value = true
+      showTurnSummary.value = false 
+      dende?.disableDrawing()
+      isMyTurnToDraw.value = false
+      pushSystemMessage("Game Over! checking results...")
       break
   }
 }
@@ -197,10 +234,10 @@ const handleMessage = (payload: Uint8Array) => {
   scrollToChatBottom()
 }
 
-const handleTurnSummary = (payload: Uint8Array) => {
+// New Handler for Initial Data Sync
+const handleInitialPlayers = (payload: Uint8Array) => {
   const summary = TurnSummary.decode(payload)
   
-  // Sync player scores
   const newPlayers: Player[] = []
   summary.usernames.forEach((u: string, i: number) => {
     newPlayers.push({
@@ -209,7 +246,39 @@ const handleTurnSummary = (payload: Uint8Array) => {
       guessed: false
     })
   })
-  players.value = newPlayers.sort((a, b) => b.score - a.score)
+
+  // Overwrite local players with the authoritative list from server
+  players.value = newPlayers
+  console.log("Synced initial players and scores:", newPlayers)
+}
+
+const handleTurnSummary = (payload: Uint8Array) => {
+  const summary = TurnSummary.decode(payload)
+  
+  const oldScores = new Map(players.value.map(p => [p.username, p.score]))
+  
+  const newPlayers: Player[] = []
+  const results: TurnResult[] = []
+
+  summary.usernames.forEach((u: string, i: number) => {
+    const newScore = summary.scores[i]
+    const oldScore = oldScores.get(u) || 0
+    
+    results.push({
+      username: u,
+      score: newScore,
+      diff: newScore - oldScore
+    })
+
+    newPlayers.push({
+      username: u,
+      score: newScore,
+      guessed: false
+    })
+  })
+
+  players.value = newPlayers
+  turnResults.value = results.sort((a, b) => b.score - a.score)
   
   showTurnSummary.value = true
   statusMessage.value = "Turn over!"
@@ -217,13 +286,9 @@ const handleTurnSummary = (payload: Uint8Array) => {
 }
 
 const handleDrawingData = (payload: Uint8Array) => {
-  // If it's my turn, ignore incoming drawings (I am the source of truth)
-  // unless it's a server-enforced clear.
   if (isMyTurnToDraw.value) return 
 
   const decoded = DrawingData.decode(payload)
-
-  // Convert Proto (0-1 float color) to Dende (0-255 RGBA)
   const part: IDendePart = {
     type: decoded.type as unknown as DendePartType,
     isLineEnd: decoded.isLineEnd,
@@ -245,9 +310,8 @@ const handleDrawingData = (payload: Uint8Array) => {
 const sendPart = (part: IDendePart) => {
   if (!socket.value || socket.value.readyState !== WebSocket.OPEN) return
 
-  // Convert Dende (0-255) to Proto (0-1)
   const payload = DrawingData.create({
-    type: part.type, // 0=Drawing, 1=Filling, 4=Clear
+    type: part.type, 
     isLineEnd: part.isLineEnd,
     coordinates: part.coordinates,
     color: [
@@ -262,7 +326,7 @@ const sendPart = (part: IDendePart) => {
   const protoBytes = DrawingData.encode(payload).finish()
   const packet = new Uint8Array(protoBytes.length + 1)
   packet.set(protoBytes, 0)
-  packet[protoBytes.length] = SERIAL_DRAWING // Always use channel 2
+  packet[protoBytes.length] = SERIAL_DRAWING 
   
   socket.value.send(packet)
 }
@@ -291,7 +355,6 @@ const sendChatMessage = () => {
   packet[bytes.length] = SERIAL_MESSAGE
   socket.value.send(packet)
 
-  // Optimistic UI update
   chatMessages.value.push({ from: 'You', content: chatInput.value, isSystem: false })
   chatInput.value = ''
   scrollToChatBottom()
@@ -312,7 +375,7 @@ const updateSettings = () => {
 // --- Dende Actions ---
 const undo = () => dende?.undo()
 const redo = () => dende?.redo()
-const clear = () => dende?.clear() // This triggers onPartCreated -> sendPart(Clear)
+const clear = () => dende?.clear() 
 
 // --- Lifecycle ---
 
@@ -324,14 +387,12 @@ onMounted(() => {
   }
 
   dende.onPartCreated((part) => {
-    // Only send if we are allowed to draw
     if (isMyTurnToDraw.value) {
         sendPart(part)
     }
   })
   
-  // Initial State
-  dende.disableDrawing() // Wait for game to start/turn
+  dende.disableDrawing() 
   updateSettings()
   connect()
 })
@@ -344,34 +405,6 @@ onUnmounted(() => {
 <template>
   <div class="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white p-4">
     
-    <div v-if="wordChoices.length > 0" class="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-      <div class="bg-gray-800 p-8 rounded-lg shadow-xl">
-        <h2 class="text-2xl font-bold text-center mb-6">Choose a word:</h2>
-        <div class="flex space-x-4">
-          <button
-            v-for="(word, index) in wordChoices"
-            :key="word"
-            @click="sendWordChoice(index)"
-            class="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold transition"
-          >
-            {{ word }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="showTurnSummary" class="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-      <div class="bg-gray-800 p-8 rounded-lg w-full max-w-md">
-        <h2 class="text-2xl font-bold text-center mb-6">Turn Over!</h2>
-        <ul class="space-y-2">
-          <li v-for="player in players" :key="player.username" class="flex justify-between p-2 bg-gray-700 rounded">
-            <span>{{ player.username }}</span>
-            <span class="font-bold text-yellow-400">{{ player.score }} pts</span>
-          </li>
-        </ul>
-      </div>
-    </div>
-
     <div class="w-full max-w-7xl mb-4">
       <h2 class="text-xl font-bold text-center p-3 bg-gray-800 rounded-lg border-b-4 border-blue-600">
         {{ statusMessage }}
@@ -383,7 +416,7 @@ onUnmounted(() => {
       <div class="w-full md:w-48 bg-gray-800 p-4 rounded-lg shadow-lg h-fit">
         <h3 class="text-lg font-bold mb-3 text-gray-400 uppercase tracking-wider">Players</h3>
         <ul class="space-y-2">
-          <li v-for="player in players" :key="player.username" class="flex justify-between items-center bg-gray-700 p-2 rounded">
+          <li v-for="player in sortedPlayers" :key="player.username" class="flex justify-between items-center bg-gray-700 p-2 rounded">
             <span :class="{ 'text-green-400 font-bold': player.guessed }">
               {{ player.username }}
               <span v-if="player.guessed">✓</span>
@@ -394,11 +427,89 @@ onUnmounted(() => {
       </div>
 
       <div class="grow flex flex-col">
-        <div 
-          ref="dendeContainer" 
-          class="bg-white rounded-lg shadow-2xl overflow-hidden border-4 border-gray-700"
-          style="line-height: 0;"
-        ></div>
+        <div class="relative rounded-lg overflow-hidden border-4 border-gray-700 bg-white">
+          
+          <div v-if="wordChoices.length > 0" class="absolute inset-0 bg-black/80 flex items-center justify-center z-10">
+            <div class="bg-gray-800 p-6 rounded-lg shadow-xl text-center">
+              <h2 class="text-xl font-bold mb-4">Choose a word:</h2>
+              <div class="flex gap-2 justify-center flex-wrap">
+                <button
+                  v-for="(word, index) in wordChoices"
+                  :key="word"
+                  @click="sendWordChoice(index)"
+                  class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded font-bold transition"
+                >
+                  {{ word }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="showTurnSummary && !showLeaderboard" class="absolute inset-0 bg-black/80 flex items-center justify-center z-10">
+            <div class="bg-gray-800 p-6 rounded-lg w-3/4 max-w-sm animate-in fade-in zoom-in duration-300">
+              <h2 class="text-2xl font-bold text-center mb-4">Round Over!</h2>
+              <ul class="space-y-2">
+                <li v-for="result in turnResults" :key="result.username" class="flex justify-between p-2 bg-gray-700 rounded items-center">
+                  <span>{{ result.username }}</span>
+                  <div class="flex items-center gap-2">
+                    <span v-if="result.diff > 0" class="text-green-400 font-bold text-sm">
+                      +{{ result.diff }}
+                    </span>
+                    <span class="font-mono text-gray-300">{{ result.score }}</span>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div v-if="showLeaderboard" class="absolute inset-0 bg-black/90 flex items-center justify-center z-50">
+            <div class="bg-gray-800 p-8 rounded-xl shadow-2xl w-full max-w-md border border-gray-600 text-center animate-in fade-in zoom-in duration-500">
+              <h1 class="text-4xl font-extrabold mb-2 text-transparent bg-clip-text bg-linear-to-r from-yellow-400 to-yellow-600">
+                🏆 GAME OVER 🏆
+              </h1>
+              <p class="text-gray-400 mb-6">Final Standings</p>
+              
+              <div class="space-y-3 mb-8">
+                <div 
+                  v-for="(player, index) in sortedPlayers.slice(0, 5)" 
+                  :key="player.username" 
+                  class="flex items-center justify-between p-3 rounded-lg transform transition hover:scale-105"
+                  :class="{
+                    'bg-yellow-900/40 border border-yellow-500/50': index === 0, // 1st Place Gold
+                    'bg-gray-700/50 border border-gray-500/50': index === 1,    // 2nd Place Silver
+                    'bg-orange-900/30 border border-orange-700/50': index === 2, // 3rd Place Bronze
+                    'bg-gray-700/30': index > 2
+                  }"
+                >
+                  <div class="flex items-center gap-3">
+                    <span class="font-bold text-lg w-6" :class="{
+                      'text-yellow-400': index === 0,
+                      'text-gray-300': index === 1,
+                      'text-orange-400': index === 2,
+                      'text-gray-500': index > 2
+                    }">
+                      #{{ index + 1 }}
+                    </span>
+                    <span class="font-semibold text-white">{{ player.username }}</span>
+                  </div>
+                  <span class="font-mono font-bold text-xl">{{ player.score }} pts</span>
+                </div>
+              </div>
+
+              <button 
+                @click="router.push('/')" 
+                class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition duration-200 shadow-lg"
+              >
+                Return to Home 🏠
+              </button>
+            </div>
+          </div>
+
+          <div 
+            ref="dendeContainer" 
+            style="line-height: 0;"
+          ></div>
+        </div>
         
         <div class="bg-gray-800 p-4 rounded-lg shadow-md mt-4 flex items-center gap-4" :class="{'opacity-50 pointer-events-none': !isMyTurnToDraw}">
           <input 
