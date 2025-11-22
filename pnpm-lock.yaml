@@ -11,6 +11,9 @@ importers:
       '@bufbuild/protobuf':
         specifier: ^2.10.1
         version: 2.10.1
+      create-cloudflare:
+        specifier: ^2.55.1
+        version: 2.55.1
       tailwindcss:
         specifier: ^4.1.17
         version: 4.1.17
@@ -522,6 +525,11 @@ packages:
   case-anything@2.1.13:
     resolution: {integrity: sha512-zlOQ80VrQ2Ue+ymH5OuM/DlDq64mEm+B9UTdHULv5osUMD6HalNTblf2b1u/m6QecjsnOkBpqVZ+XPwIVsy7Ng==}
     engines: {node: '>=12.13'}
+
+  create-cloudflare@2.55.1:
+    resolution: {integrity: sha512-opPPBKgZJdw0kWH8zqNU7CgbDbT5a2wQr0U/9yXCaS0s5H/NSTJAj/pqhenCbMVOEX0DiRemq5I+pIrDOvPelA==}
+    engines: {node: '>=18.14.1'}
+    hasBin: true
 
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
@@ -1120,6 +1128,8 @@ snapshots:
   alien-signals@3.1.0: {}
 
   case-anything@2.1.13: {}
+
+  create-cloudflare@2.55.1: {}
 
   csstype@3.2.3: {}
 
