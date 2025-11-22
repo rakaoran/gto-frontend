@@ -11,6 +11,13 @@ const router = useRouter()
     
     <div class="flex gap-4">
       <button 
+        @click="router.push('/game')" 
+        class="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold shadow-md hover:bg-green-700 transition duration-200"
+      >
+        Play Now 🎮
+      </button>
+
+      <button 
         @click="router.push('/login')" 
         class="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold shadow-md hover:bg-blue-700 transition duration-200"
       >

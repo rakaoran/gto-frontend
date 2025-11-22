@@ -299,6 +299,9 @@ export class Dende {
     public reset() {
         this._clear()
         this.ctx.closePath()
+        this.isDrawing = false
+        this.otherStartedDrawing = false;
+        this.mode = "drawing"
         this.undoStack = []
         this.redoStack = []
         this.saveSnapshot()
@@ -340,6 +343,8 @@ export class Dende {
                     this.otherStartedDrawing = true;
                     this.ctx.beginPath();
                     this.ctx.moveTo(part.coordinates[0]!, part.coordinates[1]!);
+                    this.ctx.lineTo(part.coordinates[0]!, part.coordinates[1]!);
+                    this.ctx.stroke()
                 }
 
                 if (part.coordinates.length >= 2) {
@@ -352,6 +357,7 @@ export class Dende {
                 if (part.isLineEnd) {
                     this.saveSnapshot();
                     this.otherStartedDrawing = false;
+                    this.ctx.stroke()
                 }
 
                 break;
