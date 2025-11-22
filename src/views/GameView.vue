@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
-import { useRoute, useRouter } from 'vue-router' // <--- 1. Import useRouter
+import { useRoute, useRouter } from 'vue-router'
 import { API_BASE_URL } from '../config'
 import { Dende, type IDendePart, DendePartType } from '../dende'
 import { DrawingData } from '../proto/drawing'
@@ -12,20 +12,24 @@ const SERIAL_MESSAGE = 1
 const SERIAL_DRAWING = 2
 const SERIAL_WORD_CHOICE = 3
 const SERIAL_TURN_SUMMARY = 4
-const SERIAL_INITIAL_PLAYERS_AND_SCORES = 5 // <--- This was missing!
+const SERIAL_INITIAL_PLAYERS_AND_SCORES = 5
 
 // --- Event Types ---
 const EVENT_PLAYER_JOINED = 0
+// const EVENT_PLAYER_RECONNECTED = 1
 const EVENT_PLAYER_LEFT = 2
 const EVENT_PlAYER_CHOOSING_WORD = 3
 const EVENT_GAME_STARTED = 4
 const EVENT_PLEASE_CHOOSE_WORD = 5
 const EVENT_PLAYER_STARTED_DRAWING = 6
 const EVENT_PLAYER_HAS_GUESSED_THE_WORD = 7
+// const EVENT_TURN_SUMMARY = 8 (Handled via SERIAL_TURN_SUMMARY usually)
+// const EVENT_NEXT_ROUND = 9
+const EVENT_LEADERBOARD = 10 // <--- 1. Added missing event ID
 
 // --- State ---
 const route = useRoute()
-const router = useRouter() // <--- 2. Initialize router
+const router = useRouter()
 const dendeContainer = ref<HTMLElement | null>(null)
 const socket = ref<WebSocket | null>(null)
 const isConnected = ref(false)
@@ -33,17 +37,24 @@ const statusMessage = ref('Connecting...')
 const chatBox = ref<HTMLElement | null>(null)
 const chatInput = ref('')
 
-// ... [Game Data, UI State, Dende Instance, Helper Functions remain the same] ...
-
 interface Player {
     username: string
     score: number
     guessed: boolean
 }
+
+interface RoundResult {
+    username: string
+    gain: number
+}
+
 const players = ref<Player[]>([])
+const turnResults = ref<RoundResult[]>([])
 const chatMessages = ref<any[]>([])
 const wordChoices = ref<string[]>([])
 const showTurnSummary = ref(false)
+const showLeaderboard = ref(false) // <--- 2. New State for Leaderboard
+const isGameEnded = ref(false)     // <--- 3. Flag to prevent error message on close
 const isMyTurnToDraw = ref(false)
 
 const currentColor = ref('#000000')
@@ -58,9 +69,7 @@ const addPlayerIfNeeded = (username: string) => {
     }
 }
 
-// New Handler for Initial Data Sync
 const handleInitialPlayers = (payload: Uint8Array) => {
-  // We reuse TurnSummary structure because it contains lists of names and scores
   const summary = TurnSummary.decode(payload)
   
   const newPlayers: Player[] = []
@@ -72,7 +81,6 @@ const handleInitialPlayers = (payload: Uint8Array) => {
     })
   })
 
-  // Overwrite local players with the authoritative list from server
   players.value = newPlayers
   console.log("Synced initial players and scores:", newPlayers)
 }
@@ -97,7 +105,6 @@ const pushSystemMessage = (content: string) => {
 // --- WebSocket Logic ---
 
 const connect = () => {
-    // 3. Capture gameId locally so we can use it even after we change the URL
     const gameId = route.params.gameId
 
     let endpoint = '/matchmaking'
@@ -110,12 +117,9 @@ const connect = () => {
     socket.value.binaryType = "arraybuffer"
 
     socket.value.onopen = () => {
-        // Check our local variable 'gameId', not route.params (which might change)
         if (gameId) {
             console.log(`Joining Game ${gameId}... 🚀`)
             statusMessage.value = "Joining game..."
-
-            // 4. AESTHETIC FIX: Clean the URL to /game without reloading
             router.replace({ name: 'game' })
         } else {
             console.log("Connected to Matchmaking! 🚀")
@@ -141,13 +145,14 @@ const connect = () => {
                     handleMessage(payload)
                     break
                 case SERIAL_DRAWING:
-                    showTurnSummary.value = false
+                    // If leaderboard is showing, don't hide it for late drawings
+                    if (!showLeaderboard.value) showTurnSummary.value = false
                     handleDrawingData(payload)
                     break
                 case SERIAL_TURN_SUMMARY:
                     handleTurnSummary(payload)
                     break
-                case SERIAL_INITIAL_PLAYERS_AND_SCORES: // <--- Add this case back!
+                case SERIAL_INITIAL_PLAYERS_AND_SCORES:
                     handleInitialPlayers(payload)
                     break
                 default:
@@ -158,13 +163,30 @@ const connect = () => {
         }
     }
 
-    socket.value.onclose = () => {
+    socket.value.onclose = (event: CloseEvent) => {
         isConnected.value = false
-        statusMessage.value = "Disconnected."
+        console.log("Socket closed:", event.code, event.reason)
+
+        // 4. Check if the game ended naturally before showing errors
+        if (isGameEnded.value) {
+            statusMessage.value = "Game Over"
+            return 
+        }
+
+        if (event.reason === "room-not-found") {
+            statusMessage.value = "❌ Room not found!"
+            pushSystemMessage("Error: That room doesn't exist. 🤷‍♂️")
+        } else if (event.reason === "room-full") {
+            statusMessage.value = "❌ Room is full!"
+            pushSystemMessage("Error: That room is already full. 🚫")
+        } else if (event.code === 1006) {
+            statusMessage.value = "Unknown error occurred."
+            pushSystemMessage("Connection failed. Unknown error. 😵")
+        } else {
+            statusMessage.value = "Disconnected."
+        }
     }
 }
-
-// ... [Rest of the file (Handlers, Sending Data, etc.) remains exactly the same] ...
 
 const handleEvent = (payload: Uint8Array) => {
     const event = Event.decode(payload)
@@ -226,6 +248,15 @@ const handleEvent = (payload: Uint8Array) => {
             if (p) p.guessed = true
             pushSystemMessage(`${event.data} guessed it! 🎉`)
             break
+        
+        // 5. Handle Leaderboard Event
+        case EVENT_LEADERBOARD:
+            isGameEnded.value = true // Mark game as naturally ended
+            showTurnSummary.value = false
+            showLeaderboard.value = true // Trigger the UI
+            statusMessage.value = "Game Over! 🏆"
+            pushSystemMessage("Game Over! Check the leaderboard! 🏆")
+            break
     }
 }
 
@@ -239,16 +270,31 @@ const handleMessage = (payload: Uint8Array) => {
 const handleTurnSummary = (payload: Uint8Array) => {
     const summary = TurnSummary.decode(payload)
 
-    // Sync player scores
+    const currentScores = new Map<string, number>()
+    players.value.forEach(p => currentScores.set(p.username, p.score))
+
     const newPlayers: Player[] = []
+    const results: RoundResult[] = []
+
     summary.usernames.forEach((u: string, i: number) => {
+        const newScore = summary.scores[i]
+        const oldScore = currentScores.get(u) || 0
+        const diff = newScore - oldScore
+
+        results.push({
+            username: u,
+            gain: diff
+        })
+
         newPlayers.push({
             username: u,
-            score: summary.scores[i],
+            score: newScore,
             guessed: false
         })
     })
+
     players.value = newPlayers.sort((a, b) => b.score - a.score)
+    turnResults.value = results.sort((a, b) => b.gain - a.gain)
 
     showTurnSummary.value = true
     statusMessage.value = "Turn over!"
@@ -345,6 +391,10 @@ const undo = () => dende?.undo()
 const redo = () => dende?.redo()
 const clear = () => dende?.clear()
 
+const goHome = () => {
+    router.push('/')
+}
+
 onMounted(() => {
     dende = new Dende(800, 600)
 
@@ -371,33 +421,6 @@ onUnmounted(() => {
 <template>
     <div class="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white p-4">
 
-        <div v-if="wordChoices.length > 0"
-            class="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-            <div class="bg-gray-800 p-8 rounded-lg shadow-xl">
-                <h2 class="text-2xl font-bold text-center mb-6">Choose a word:</h2>
-                <div class="flex space-x-4">
-                    <button v-for="(word, index) in wordChoices" :key="word" @click="sendWordChoice(index)"
-                        class="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold transition">
-                        {{ word }}
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div v-if="showTurnSummary"
-            class="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-            <div class="bg-gray-800 p-8 rounded-lg w-full max-w-md">
-                <h2 class="text-2xl font-bold text-center mb-6">Turn Over!</h2>
-                <ul class="space-y-2">
-                    <li v-for="player in players" :key="player.username"
-                        class="flex justify-between p-2 bg-gray-700 rounded">
-                        <span>{{ player.username }}</span>
-                        <span class="font-bold text-yellow-400">{{ player.score }} pts</span>
-                    </li>
-                </ul>
-            </div>
-        </div>
-
         <div class="w-full max-w-7xl mb-4">
             <h2 class="text-xl font-bold text-center p-3 bg-gray-800 rounded-lg border-b-4 border-blue-600">
                 {{ statusMessage }}
@@ -421,9 +444,65 @@ onUnmounted(() => {
             </div>
 
             <div class="grow flex flex-col">
-                <div ref="dendeContainer"
-                    class="bg-white rounded-lg shadow-2xl overflow-hidden border-4 border-gray-700"
-                    style="line-height: 0;"></div>
+                <div class="relative">
+                    
+                    <div ref="dendeContainer"
+                        class="bg-white rounded-lg shadow-2xl overflow-hidden border-4 border-gray-700"
+                        style="line-height: 0;">
+                    </div>
+
+                    <div v-if="showTurnSummary"
+                        class="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 rounded-lg">
+                        <div class="bg-gray-800 p-8 rounded-lg w-full max-w-md">
+                            <h2 class="text-2xl font-bold text-center mb-6">Round Results</h2>
+                            <ul class="space-y-2">
+                                <li v-for="res in turnResults" :key="res.username"
+                                    class="flex justify-between p-2 bg-gray-700 rounded items-center">
+                                    <span>{{ res.username }}</span>
+                                    <span class="font-bold font-mono" 
+                                          :class="res.gain > 0 ? 'text-green-400' : 'text-gray-500'">
+                                        <span v-if="res.gain > 0">+</span>{{ res.gain }}
+                                    </span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div v-if="showLeaderboard"
+                        class="absolute inset-0 bg-black bg-opacity-85 flex items-center justify-center z-50 rounded-lg">
+                        <div class="bg-gray-800 p-8 rounded-lg w-full max-w-md text-center border-4 border-yellow-500">
+                            <h2 class="text-4xl font-bold mb-8 text-yellow-400">🏆 Game Over! 🏆</h2>
+                            <ul class="space-y-3 mb-8">
+                                <li v-for="(player, index) in players" :key="player.username"
+                                    class="flex justify-between items-center p-3 rounded text-lg"
+                                    :class="index === 0 ? 'bg-yellow-900/50 border border-yellow-500' : 'bg-gray-700'">
+                                    <div class="flex items-center gap-3">
+                                        <span class="font-bold" :class="index === 0 ? 'text-yellow-400' : 'text-gray-400'">#{{ index + 1 }}</span>
+                                        <span>{{ player.username }}</span>
+                                    </div>
+                                    <span class="font-bold font-mono text-white">{{ player.score }} pts</span>
+                                </li>
+                            </ul>
+                            <button @click="goHome" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-full transition transform hover:scale-105">
+                                Back to Home
+                            </button>
+                        </div>
+                    </div>
+
+                    <div v-if="wordChoices.length > 0"
+                        class="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 rounded-lg">
+                        <div class="bg-gray-800 p-8 rounded-lg shadow-xl">
+                            <h2 class="text-2xl font-bold text-center mb-6">Choose a word:</h2>
+                            <div class="flex space-x-4">
+                                <button v-for="(word, index) in wordChoices" :key="word" @click="sendWordChoice(index)"
+                                    class="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold transition">
+                                    {{ word }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
 
                 <div class="bg-gray-800 p-4 rounded-lg shadow-md mt-4 flex items-center gap-4"
                     :class="{ 'opacity-50 pointer-events-none': !isMyTurnToDraw }">
