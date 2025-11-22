@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package game;
+
+message DrawingData {
+  int32 type = 1;
+  bool isLineEnd = 2;
+  repeated int32 coordinates = 3;
+  repeated float color = 4; // RGBA
+  int32 lineWidth = 5;
+}

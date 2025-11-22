@@ -1,9 +1,9 @@
-// src/router/index.ts
 import { createRouter, createWebHistory } from 'vue-router'
 
-// You can define components directly here or import them from a 'views' folder
-const Home = { template: '<div>Home Page</div>' }
-const About = { template: '<div>About Page</div>' }
+// Import the views we just created
+import HomeView from '../views/HomeView.vue'
+import LoginView from '../views/LoginView.vue'
+import SignUpView from '../views/SignUpView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -11,12 +11,17 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: Home
+      component: HomeView
     },
     {
-      path: '/about',
-      name: 'about',
-      component: About
+      path: '/login',
+      name: 'login',
+      component: LoginView
+    },
+    {
+      path: '/signup',
+      name: 'signup',
+      component: SignUpView
     }
   ]
 })

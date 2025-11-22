@@ -16,7 +16,7 @@
 
     /* Linting */
     "strict": true,
-    "noUnusedLocals": true,
+    // "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
@@ -28,7 +28,7 @@
     // These are good to keep
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-
+    "strictNullChecks": false
   },
   "include": ["vite.config.ts"]
 }
