@@ -13,6 +13,7 @@ const SERIAL_DRAWING = 2
 const SERIAL_WORD_CHOICE = 3
 const SERIAL_TURN_SUMMARY = 4
 const SERIAL_INITIAL_PLAYERS_AND_SCORES = 5
+const SERIAL_GAME_ID = 6
 
 // --- Event Types ---
 const EVENT_PLAYER_JOINED = 0
@@ -57,6 +58,7 @@ const showLeaderboard = ref(false)
 const isGameEnded = ref(false)
 const hasGameStarted = ref(false)
 const isMyTurnToDraw = ref(false)
+const gameRoomId = ref('') // Store the game ID received from backend
 
 const currentColor = ref('#000000')
 const currentSize = ref(5)
@@ -155,6 +157,9 @@ const connect = () => {
                     break
                 case SERIAL_INITIAL_PLAYERS_AND_SCORES:
                     handleInitialPlayers(payload)
+                    break
+                case SERIAL_GAME_ID:
+                    handleGameId(payload)
                     break
                 default:
                     console.warn("Unknown serial type:", type)
@@ -273,6 +278,12 @@ const handleMessage = (payload: Uint8Array) => {
     scrollToChatBottom()
 }
 
+const handleGameId = (payload: Uint8Array) => {
+    const msg = Message.decode(payload)
+    gameRoomId.value = msg.content
+    console.log("Game Room ID received:", gameRoomId.value)
+}
+
 const handleTurnSummary = (payload: Uint8Array) => {
     const summary = TurnSummary.decode(payload)
 
@@ -381,6 +392,17 @@ const sendChatMessage = () => {
     scrollToChatBottom()
 }
 
+const copyInviteLink = () => {
+    if (!gameRoomId.value) return
+    const link = `${window.location.origin}/join/${gameRoomId.value}`
+    navigator.clipboard.writeText(link).then(() => {
+        pushSystemMessage('Invite link copied! 📋')
+    }).catch(err => {
+        console.error('Failed to copy: ', err)
+        pushSystemMessage('Failed to copy link.')
+    })
+}
+
 const updateSettings = () => {
     if (!dende) return
     const hex = currentColor.value
@@ -437,6 +459,17 @@ onUnmounted(() => {
 
             <div class="w-full md:w-48 bg-gray-800 p-4 rounded-lg shadow-lg h-fit">
                 <h3 class="text-lg font-bold mb-3 text-gray-400 uppercase tracking-wider">Players</h3>
+                
+                <button 
+                    v-if="gameRoomId" 
+                    @click="copyInviteLink"
+                    class="w-full mb-4 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2 px-2 rounded flex items-center justify-center gap-2 transition shadow-lg cursor-pointer"
+                    title="Copy Invite Link"
+                >
+                    <span>Copy Invite</span>
+                    <span>🔗</span>
+                </button>
+
                 <ul class="space-y-2">
                     <li v-for="player in players" :key="player.username"
                         class="flex justify-between items-center bg-gray-700 p-2 rounded">
