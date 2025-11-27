@@ -51,6 +51,9 @@ const handleSignUp = async () => {
       throw new Error(data.message || 'Signup failed')
     }
 
+    // --- NEW: Store username in local storage ---
+    localStorage.setItem('username', username.value)
+
     // Success! Redirect to home (or game)
     router.push('/')
 

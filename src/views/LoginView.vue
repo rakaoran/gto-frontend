@@ -34,6 +34,9 @@ const handleLogin = async () => {
       throw new Error(data.message || 'Login failed')
     }
 
+    // --- NEW: Store username in local storage ---
+    localStorage.setItem('username', username.value)
+
     // If successful, the cookie is now set automatically by the browser.
     // We can redirect to the game or home.
     router.push('/')

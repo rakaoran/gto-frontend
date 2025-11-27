@@ -1,11 +1,41 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { endpoints } from '../config'
 
 const router = useRouter()
+const isLoggedIn = ref(false)
+const username = ref('')
+
+onMounted(() => {
+  const storedUser = localStorage.getItem('username')
+  if (storedUser) {
+    isLoggedIn.value = true
+    username.value = storedUser
+  }
+})
 
 // Simple navigation helper
 const navigateTo = (path: string) => {
   router.push(path)
+}
+
+const handleLogout = async () => {
+  try {
+    // Send logout request to backend (clears httpOnly cookie)
+    await fetch(endpoints.logout, {
+      method: 'POST',
+      credentials: 'include'
+    })
+  } catch (err) {
+    console.error("Logout error:", err)
+  } finally {
+    // Clear frontend state regardless of backend success
+    localStorage.removeItem('username')
+    isLoggedIn.value = false
+    username.value = ''
+    router.push('/')
+  }
 }
 </script>
 
@@ -24,29 +54,49 @@ const navigateTo = (path: string) => {
       </p>
 
       <div class="flex flex-col sm:flex-row gap-4 w-full justify-center max-w-md mx-auto">
-        <button 
-          @click="navigateTo('/game')" 
-          class="w-full sm:w-auto px-8 py-4 bg-linear-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold text-lg shadow-lg shadow-green-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex items-center justify-center gap-2"
-        >
-          <span>Play Now</span>
-          <span>🎮</span>
-        </button>
+        
+        <template v-if="isLoggedIn">
+           <div class="w-full flex flex-col items-center gap-4">
+              <p class="text-lg text-gray-700 font-medium">
+                Welcome back, <span class="text-blue-600 font-bold">{{ username }}</span>!
+              </p>
 
-        <div class="flex gap-3 w-full sm:w-auto">
-          <button 
-            @click="navigateTo('/login')" 
-            class="flex-1 px-6 py-4 bg-white text-blue-600 font-semibold rounded-xl shadow-md border border-blue-100 hover:bg-blue-50 hover:border-blue-200 transition-all duration-200"
-          >
-            Login
-          </button>
-          
-          <button 
-            @click="navigateTo('/signup')" 
-            class="flex-1 px-6 py-4 bg-blue-600 text-white font-semibold rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 hover:-translate-y-0.5 transition-all duration-200"
-          >
-            Sign Up
-          </button>
-        </div>
+              <div class="flex flex-col sm:flex-row gap-4 w-full">
+                <button 
+                  @click="navigateTo('/game')" 
+                  class="flex-1 px-8 py-4 bg-linear-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold text-lg shadow-lg shadow-green-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex items-center justify-center gap-2"
+                >
+                  <span>Play Now</span>
+                </button>
+
+                <button 
+                  @click="handleLogout" 
+                  class="flex-1 px-6 py-4 bg-white text-red-500 font-semibold rounded-xl shadow-md border border-red-100 hover:bg-red-50 hover:border-red-200 transition-all duration-200"
+                >
+                  Logout
+                </button>
+              </div>
+           </div>
+        </template>
+
+        <template v-else>
+          <div class="flex gap-3 w-full sm:w-auto">
+            <button 
+              @click="navigateTo('/login')" 
+              class="flex-1 px-6 py-4 bg-white text-blue-600 font-semibold rounded-xl shadow-md border border-blue-100 hover:bg-blue-50 hover:border-blue-200 transition-all duration-200"
+            >
+              Login
+            </button>
+            
+            <button 
+              @click="navigateTo('/signup')" 
+              class="flex-1 px-6 py-4 bg-blue-600 text-white font-semibold rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 hover:-translate-y-0.5 transition-all duration-200"
+            >
+              Sign Up
+            </button>
+          </div>
+        </template>
+
       </div>
     </header>
 
@@ -61,7 +111,7 @@ const navigateTo = (path: string) => {
         </div>
 
         <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
-          <div class="text-4xl mb-4 bg-purple-100 w-16 h-16 flex items-center justify-center rounded-full">🧠</div>
+          <div class="text-4xl mb-4 bg-purple-100 w-16 h-16 flex items-center justify-center rounded-full">🤔</div>
           <h3 class="text-xl font-bold mb-2 text-slate-800">Guess Fast</h3>
           <p class="text-slate-600">
             Watch your opponents draw in real-time. Be the first to type the correct answer to earn maximum points.
