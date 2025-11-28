@@ -66,33 +66,53 @@ const handleSignUp = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-100">
-    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
-      <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Create Account 🚀</h2>
+  <div class="min-h-screen flex items-center justify-center bg-[#1F1F1F] p-4 relative overflow-hidden selection:bg-[#FF0033] selection:text-white">
+    
+    <div class="absolute top-0 left-1/4 w-96 h-96 bg-[#00E5FF] rounded-full mix-blend-screen filter blur-[128px] opacity-10 animate-pulse"></div>
+    <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-[#FF0033] rounded-full mix-blend-screen filter blur-[128px] opacity-10 animate-pulse" style="animation-delay: 1s;"></div>
+
+    <div class="w-full max-w-md bg-[#000000] border-2 border-[#1F1F1F] rounded-none shadow-[8px_8px_0px_0px_#6B0000] relative z-10 transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[12px_12px_0px_0px_#FF0033]">
       
-      <form @submit.prevent="handleSignUp">
-        <div v-if="errorMsg" class="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
+      <div class="p-8 border-b border-[#1F1F1F]">
+        <h2 class="text-3xl font-black text-white uppercase italic tracking-tighter transform -skew-x-6">
+          New <span class="text-transparent bg-clip-text bg-linear-to-r from-[#FF0033] to-[#00E5FF]">Player</span>
+        </h2>
+        <p class="text-gray-500 font-mono text-xs mt-2 tracking-widest uppercase">
+          // Initialize Profile
+        </p>
+      </div>
+      
+      <form @submit.prevent="handleSignUp" class="p-8 space-y-6">
+        
+        <div v-if="errorMsg" class="p-4 bg-[#6B0000]/20 border border-[#FF0033] text-[#FF0033] text-sm font-mono flex items-center gap-3">
+          <span class="text-xl">⚠️</span>
           {{ errorMsg }}
         </div>
 
-        <div class="mb-4">
-          <label class="block text-gray-700 text-sm font-bold mb-2" for="username">Username</label>
+        <div class="group">
+          <label class="block text-[#00E5FF] font-mono text-xs mb-2 uppercase tracking-wider group-focus-within:text-[#FF0033] transition-colors" for="username">
+            Username
+          </label>
           <input 
             v-model="username"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" 
+            class="w-full bg-[#1F1F1F] text-white px-4 py-3 border border-transparent focus:border-[#00E5FF] outline-none font-bold placeholder-gray-600 transition-all duration-200" 
             id="username" 
             type="text" 
-            placeholder="user_123" 
+            placeholder="PLAYER_ONE" 
             required
           >
-          <p class="text-xs text-gray-500 mt-1">3-20 characters, letters, numbers & underscores.</p>
+          <p class="text-[10px] text-gray-500 mt-2 font-mono">
+            [A-Z0-9_] ONLY • 3-20 CHARS
+          </p>
         </div>
         
-        <div class="mb-4">
-          <label class="block text-gray-700 text-sm font-bold mb-2" for="password">Password</label>
+        <div class="group">
+          <label class="block text-[#00E5FF] font-mono text-xs mb-2 uppercase tracking-wider group-focus-within:text-[#FF0033] transition-colors" for="password">
+            Password
+          </label>
           <input 
             v-model="password"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" 
+            class="w-full bg-[#1F1F1F] text-white px-4 py-3 border border-transparent focus:border-[#00E5FF] outline-none font-bold placeholder-gray-600 transition-all duration-200" 
             id="password" 
             type="password" 
             placeholder="••••••••" 
@@ -100,11 +120,13 @@ const handleSignUp = async () => {
           >
         </div>
 
-        <div class="mb-6">
-          <label class="block text-gray-700 text-sm font-bold mb-2" for="confirmPassword">Confirm Password</label>
+        <div class="group">
+          <label class="block text-[#00E5FF] font-mono text-xs mb-2 uppercase tracking-wider group-focus-within:text-[#FF0033] transition-colors" for="confirmPassword">
+            Confirm Password
+          </label>
           <input 
             v-model="confirmPassword"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" 
+            class="w-full bg-[#1F1F1F] text-white px-4 py-3 border border-transparent focus:border-[#00E5FF] outline-none font-bold placeholder-gray-600 transition-all duration-200" 
             id="confirmPassword" 
             type="password" 
             placeholder="••••••••" 
@@ -113,21 +135,25 @@ const handleSignUp = async () => {
         </div>
         
         <button 
-          class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition duration-200 disabled:opacity-50" 
+          class="w-full bg-[#FF0033] hover:bg-[#ff1a47] text-black font-black uppercase text-lg py-4 border-2 border-transparent hover:border-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95" 
           type="submit"
           :disabled="isLoading"
         >
-          {{ isLoading ? 'Creating Account...' : 'Sign Up' }}
+          {{ isLoading ? 'Loading...' : 'Start Game' }}
         </button>
       </form>
 
-      <p class="mt-4 text-center text-sm text-gray-600">
-        Already have an account? 
-        <router-link to="/login" class="text-blue-600 hover:underline">Log in</router-link>
-      </p>
-      
-       <div class="mt-2 text-center">
-         <router-link to="/" class="text-sm text-gray-500 hover:text-gray-700">← Back to Home</router-link>
+      <div class="p-6 border-t border-[#1F1F1F] bg-[#050505] flex justify-between items-center">
+        <router-link to="/" class="text-xs font-mono text-gray-500 hover:text-white transition-colors">
+          &lt; ABORT
+        </router-link>
+        
+        <p class="text-xs text-gray-500 font-mono">
+          HAS ID? 
+          <router-link to="/login" class="text-[#00E5FF] hover:text-white hover:underline ml-1">
+            LOGIN_HERE
+          </router-link>
+        </p>
       </div>
     </div>
   </div>

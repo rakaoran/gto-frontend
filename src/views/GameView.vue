@@ -447,59 +447,80 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white p-4">
+    <div class="min-h-screen flex flex-col items-center justify-center bg-[#1F1F1F] text-gray-300 p-4 font-sans selection:bg-[#00E5FF] selection:text-black overflow-hidden relative">
 
-        <div class="w-full max-w-7xl mb-4">
-            <h2 class="text-xl font-bold text-center p-3 bg-gray-800 rounded-lg border-b-4 border-blue-600">
-                {{ statusMessage }}
-            </h2>
+        <div class="absolute top-0 left-0 w-[500px] h-[500px] bg-[#00E5FF] rounded-full mix-blend-screen filter blur-[150px] opacity-5 pointer-events-none"></div>
+        <div class="absolute bottom-0 right-0 w-[500px] h-[500px] bg-[#FF0033] rounded-full mix-blend-screen filter blur-[150px] opacity-5 pointer-events-none"></div>
+
+        <div class="w-full max-w-7xl mb-4 relative z-10">
+            <div class="flex items-center justify-between p-3 bg-[#000000] border border-[#00E5FF] shadow-[0_0_10px_rgba(0,229,255,0.1)]">
+                <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full animate-pulse" :class="isConnected ? 'bg-[#00E5FF]' : 'bg-[#FF0033]'"></div>
+                    <h2 class="text-sm font-mono font-bold uppercase tracking-widest text-[#00E5FF]">
+                        SYS_STATUS :: <span class="text-white">{{ statusMessage }}</span>
+                    </h2>
+                </div>
+            </div>
         </div>
 
-        <div class="flex flex-col md:flex-row w-full max-w-7xl gap-4">
+        <div class="flex flex-col lg:flex-row w-full max-w-7xl gap-6 relative z-10 h-[85vh]">
 
-            <div class="w-full md:w-48 bg-gray-800 p-4 rounded-lg shadow-lg h-fit">
-                <h3 class="text-lg font-bold mb-3 text-gray-400 uppercase tracking-wider">Players</h3>
+            <div class="w-full lg:w-64 bg-[#000000] border border-[#1F1F1F] flex flex-col shrink-0">
+                <div class="p-4 border-b border-[#1F1F1F] bg-[#050505]">
+                    <h3 class="text-xs font-bold text-[#FF0033] uppercase tracking-widest mb-1">// ROSTER</h3>
+                    <p class="text-[10px] text-gray-500 font-mono">CONNECTED_AGENTS: {{ players.length }}</p>
+                </div>
                 
-                <button 
-                    v-if="gameRoomId" 
-                    @click="copyInviteLink"
-                    class="w-full mb-4 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2 px-2 rounded flex items-center justify-center gap-2 transition shadow-lg cursor-pointer"
-                    title="Copy Invite Link"
-                >
-                    <span>Copy Invite</span>
-                    <span>🔗</span>
-                </button>
+                <div class="p-4 space-y-3 overflow-y-auto grow scrollbar-thin scrollbar-thumb-[#1F1F1F] scrollbar-track-black">
+                    <button 
+                        v-if="gameRoomId" 
+                        @click="copyInviteLink"
+                        class="w-full mb-2 bg-[#1F1F1F] hover:bg-[#2A2A2A] border border-[#00E5FF] text-[#00E5FF] text-[10px] font-bold py-2 px-2 uppercase tracking-wide flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_8px_rgba(0,229,255,0.3)] group"
+                        title="Copy Invite Link"
+                    >
+                        <span>COPY_LINK</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                    </button>
 
-                <ul class="space-y-2">
-                    <li v-for="player in players" :key="player.username"
-                        class="flex justify-between items-center bg-gray-700 p-2 rounded">
-                        <span :class="{ 'text-green-400 font-bold': player.guessed }">
-                            {{ player.username }}
-                            <span v-if="player.guessed">✓</span>
-                        </span>
-                        <span class="font-mono text-sm">{{ player.score }}</span>
-                    </li>
-                </ul>
+                    <ul class="space-y-1">
+                        <li v-for="player in players" :key="player.username"
+                            class="flex justify-between items-center p-2 border-l-2 transition-all"
+                            :class="player.guessed ? 'bg-[#00E5FF]/10 border-[#00E5FF]' : 'bg-[#1F1F1F]/30 border-[#1F1F1F]'">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold" :class="player.guessed ? 'text-[#00E5FF]' : 'text-gray-400'">
+                                    {{ player.username }}
+                                </span>
+                                <svg v-if="player.guessed" xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-[#00E5FF]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </div>
+                            <span class="font-mono text-xs text-white">{{ player.score }}</span>
+                        </li>
+                    </ul>
+                </div>
             </div>
 
-            <div class="grow flex flex-col">
-                <div class="relative">
+            <div class="grow flex flex-col min-w-0">
+                <div class="relative grow bg-[#050505] border-2 border-[#1F1F1F] flex flex-col">
                     
+                    <div class="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-[#FF0033] z-20"></div>
+                    <div class="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-[#FF0033] z-20"></div>
+                    <div class="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-[#FF0033] z-20"></div>
+                    <div class="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-[#FF0033] z-20"></div>
+
                     <div ref="dendeContainer"
-                        class="bg-white rounded-lg shadow-2xl overflow-hidden border-4 border-gray-700"
-                        style="line-height: 0;">
+                        class="w-full h-full cursor-crosshair flex items-center justify-center overflow-hidden"
+                        style="touch-action: none;">
                     </div>
 
                     <div v-if="showTurnSummary"
-                        class="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 rounded-lg">
-                        <div class="bg-gray-800 p-8 rounded-lg w-full max-w-md">
-                            <h2 class="text-2xl font-bold text-center mb-6">Round Results</h2>
-                            <ul class="space-y-2">
+                        class="absolute inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50">
+                        <div class="bg-[#000000] border border-[#00E5FF] p-8 w-full max-w-md shadow-[0_0_30px_rgba(0,229,255,0.15)] relative">
+                            <h2 class="text-2xl font-black text-white uppercase italic mb-6 text-center">// ROUND_STATS</h2>
+                            <ul class="space-y-2 mb-6 font-mono text-sm">
                                 <li v-for="res in turnResults" :key="res.username"
-                                    class="flex justify-between p-2 bg-gray-700 rounded items-center">
-                                    <span>{{ res.username }}</span>
-                                    <span class="font-bold font-mono" 
-                                          :class="res.gain > 0 ? 'text-green-400' : 'text-gray-500'">
+                                    class="flex justify-between p-2 border-b border-[#1F1F1F]">
+                                    <span class="text-gray-300">{{ res.username }}</span>
+                                    <span class="font-bold" 
+                                          :class="res.gain > 0 ? 'text-[#00E5FF]' : 'text-gray-600'">
                                         <span v-if="res.gain > 0">+</span>{{ res.gain }}
                                     </span>
                                 </li>
@@ -508,117 +529,127 @@ onUnmounted(() => {
                     </div>
 
                     <div v-if="showLeaderboard"
-                        class="absolute inset-0 bg-black bg-opacity-85 flex items-center justify-center z-50 rounded-lg">
-                        <div class="bg-gray-800 p-8 rounded-lg w-full max-w-md text-center border-4 border-yellow-500">
-                            <h2 class="text-4xl font-bold mb-8 text-yellow-400">🏆 Game Over! 🏆</h2>
+                        class="absolute inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center z-50">
+                        <div class="bg-[#000000] border-2 border-[#FF0033] p-8 w-full max-w-md text-center shadow-[0_0_50px_rgba(255,0,51,0.2)]">
+                            <h2 class="text-4xl font-black mb-8 text-white uppercase tracking-tighter italic">
+                                GAME <span class="text-[#FF0033]">OVER</span>
+                            </h2>
                             <ul class="space-y-3 mb-8">
                                 <li v-for="(player, index) in players" :key="player.username"
-                                    class="flex justify-between items-center p-3 rounded text-lg"
-                                    :class="index === 0 ? 'bg-yellow-900/50 border border-yellow-500' : 'bg-gray-700'">
+                                    class="flex justify-between items-center p-3 border"
+                                    :class="index === 0 ? 'bg-[#FF0033]/10 border-[#FF0033]' : 'border-[#1F1F1F] bg-[#1F1F1F]/20'">
                                     <div class="flex items-center gap-3">
-                                        <span class="font-bold" :class="index === 0 ? 'text-yellow-400' : 'text-gray-400'">#{{ index + 1 }}</span>
-                                        <span>{{ player.username }}</span>
+                                        <span class="font-bold font-mono" :class="index === 0 ? 'text-[#FF0033]' : 'text-gray-500'">#{{ index + 1 }}</span>
+                                        <span class="uppercase tracking-wide font-bold">{{ player.username }}</span>
                                     </div>
-                                    <span class="font-bold font-mono text-white">{{ player.score }} pts</span>
+                                    <span class="font-mono text-[#00E5FF]">{{ player.score }} PTS</span>
                                 </li>
                             </ul>
-                            <button @click="goHome" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-full transition transform hover:scale-105">
-                                Back to Home
+                            <button @click="goHome" class="bg-[#00E5FF] hover:bg-[#33efff] text-black font-black py-3 px-8 uppercase tracking-widest transition-transform hover:scale-105">
+                                EXIT_TO_MAIN
                             </button>
                         </div>
                     </div>
 
                     <div v-if="wordChoices.length > 0"
-                        class="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 rounded-lg">
-                        <div class="bg-gray-800 p-8 rounded-lg shadow-xl border border-gray-700">
-                            <h2 class="text-2xl font-bold text-center mb-2">Choose a word:</h2>
-                            <p class="text-center text-gray-400 mb-6 text-sm animate-pulse">⏳ 10s to choose</p>
+                        class="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+                        <div class="bg-[#000000] p-8 border border-[#00E5FF] shadow-2xl max-w-lg w-full">
+                            <h2 class="text-xl font-bold text-center mb-2 text-white uppercase tracking-widest">INPUT_REQUIRED</h2>
+                            <p class="text-center text-[#00E5FF] mb-8 text-xs font-mono animate-pulse">SELECT TARGET OBJECT</p>
                             
-                            <div class="flex space-x-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <button v-for="(word, index) in wordChoices" :key="word" @click="sendWordChoice(index)"
-                                    class="relative px-6 py-3 rounded-lg font-bold transition flex flex-col items-center"
-                                    :class="index === 0 
-                                        ? 'bg-blue-700 ring-2 ring-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.5)] scale-105' 
-                                        : 'bg-blue-600 hover:bg-blue-700'">
-                                    
-                                    <span v-if="index === 0" class="absolute -top-3 bg-yellow-500 text-black text-[10px] px-2 rounded-full font-bold uppercase tracking-wide shadow-sm border border-yellow-600">
-                                        Default
-                                    </span>
-                                    
-                                    {{ word }}
+                                    class="group relative px-4 py-6 border border-[#1F1F1F] bg-[#050505] hover:border-[#FF0033] hover:bg-[#FF0033]/10 transition-all flex flex-col items-center justify-center">
+                                    <span class="text-sm font-bold uppercase tracking-wider group-hover:text-white transition-colors text-gray-400">{{ word }}</span>
                                 </button>
                             </div>
                         </div>
                     </div>
 
+                    <div v-if="isMyTurnToDraw && wordChoices.length === 0" class="absolute top-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+                        <div class="bg-[#FF0033] text-black px-6 py-2 font-black uppercase tracking-widest text-xs shadow-[0_0_15px_#FF0033] animate-pulse">
+                             active_drawer // 80s
+                        </div>
+                    </div>
                 </div>
 
-                <div class="mt-4">
-                    <div v-if="isMyTurnToDraw && wordChoices.length === 0" class="mb-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-center shadow-lg animate-pulse mx-auto w-fit">
-                        🎨 You have 80s to draw!
+                <div class="mt-4 bg-[#000000] border border-[#1F1F1F] p-3 flex items-center gap-4 relative z-20"
+                     :class="{ 'opacity-50 grayscale pointer-events-none': !isMyTurnToDraw }">
+                    
+                    <div class="relative w-10 h-10 shrink-0 group">
+                        <div class="absolute inset-0 border border-[#1F1F1F] group-hover:border-[#00E5FF] transition-colors bg-transparent pointer-events-none z-10"></div>
+                        <input type="color" v-model="currentColor" @change="updateSettings"
+                            class="w-full h-full opacity-0 absolute inset-0 cursor-pointer z-20">
+                        <div class="w-full h-full" :style="{ backgroundColor: currentColor }"></div>
                     </div>
 
-                    <div class="bg-gray-800 p-4 rounded-lg shadow-md flex items-center gap-4"
-                        :class="{ 'opacity-50 pointer-events-none': !isMyTurnToDraw }">
-                        <input type="color" v-model="currentColor" @change="updateSettings"
-                            class="w-10 h-10 bg-transparent cursor-pointer">
-
-                        <div class="flex flex-col grow">
-                            <label class="text-xs text-gray-400">Size: {{ currentSize }}</label>
-                            <input type="range" v-model.number="currentSize" @input="updateSettings" min="1" max="20"
-                                class="w-full accent-blue-500">
+                    <div class="flex flex-col grow gap-1">
+                        <div class="flex justify-between items-center text-[10px] uppercase font-mono text-gray-500">
+                            <span>Stroke_Weight</span>
+                            <span>{{ currentSize }}px</span>
                         </div>
+                        <input type="range" v-model.number="currentSize" @input="updateSettings" min="1" max="20"
+                            class="w-full h-1 bg-[#1F1F1F] appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-[#00E5FF] [&::-webkit-slider-thumb]:rounded-none">
+                    </div>
 
-                        <div class="flex bg-gray-700 rounded-lg p-1">
-                            <button @click="() => { currentMode = 'drawing'; updateSettings() }"
-                                class="px-3 py-1 text-sm font-bold rounded transition"
-                                :class="currentMode === 'drawing' ? 'bg-blue-600 text-white shadow' : 'text-gray-400'">
-                                Draw
-                            </button>
-                            <button @click="() => { currentMode = 'filling'; updateSettings() }"
-                                class="px-3 py-1 text-sm font-bold rounded transition"
-                                :class="currentMode === 'filling' ? 'bg-blue-600 text-white shadow' : 'text-gray-400'">
-                                Fill
-                            </button>
-                        </div>
+                    <div class="flex border border-[#1F1F1F] divide-x divide-[#1F1F1F]">
+                        <button @click="() => { currentMode = 'drawing'; updateSettings() }"
+                            class="px-3 py-2 transition-colors hover:bg-[#1F1F1F] group"
+                            :class="currentMode === 'drawing' ? 'bg-[#1F1F1F]' : 'bg-transparent'">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" :class="currentMode === 'drawing' ? 'text-[#00E5FF]' : 'text-gray-500'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="M2 2l7.586 7.586"></path><circle cx="11" cy="11" r="2"></circle></svg>
+                        </button>
+                        <button @click="() => { currentMode = 'filling'; updateSettings() }"
+                            class="px-3 py-2 transition-colors hover:bg-[#1F1F1F]"
+                            :class="currentMode === 'filling' ? 'bg-[#1F1F1F]' : 'bg-transparent'">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" :class="currentMode === 'filling' ? 'text-[#00E5FF]' : 'text-gray-500'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M19 11l-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11z"></path><path d="M5 2l5 5"></path><path d="M2 13h15"></path><path d="M22 20a2 2 0 1 1-4 0c0-1.6 1.7-2.4 2-4 .3 1.6 2 2.4 2 4z"></path></svg>
+                        </button>
+                    </div>
 
-                        <div class="border-l border-gray-600 pl-4 flex gap-2">
-                            <button @click="undo" class="p-2 text-gray-300 hover:bg-gray-700 rounded"
-                                title="Undo">↩️</button>
-                            <button @click="redo" class="p-2 text-gray-300 hover:bg-gray-700 rounded"
-                                title="Redo">↪️</button>
-                            <button @click="clear" class="p-2 text-red-400 hover:bg-red-900/30 rounded"
-                                title="Clear">🗑️</button>
-                        </div>
+                    <div class="flex gap-2 pl-4 border-l border-[#1F1F1F]">
+                        <button @click="undo" class="p-2 text-gray-500 hover:text-white hover:bg-[#1F1F1F] transition-colors" title="Undo">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M3 7v6h6"></path><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path></svg>
+                        </button>
+                        <button @click="redo" class="p-2 text-gray-500 hover:text-white hover:bg-[#1F1F1F] transition-colors" title="Redo">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M21 7v6h-6"></path><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"></path></svg>
+                        </button>
+                        <button @click="clear" class="p-2 text-[#FF0033] hover:bg-[#FF0033]/10 transition-colors" title="Clear">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <div class="w-full md:w-72 bg-gray-800 p-4 rounded-lg shadow-lg flex flex-col h-[600px]">
-                <h3 class="text-lg font-bold mb-3 text-gray-400 uppercase tracking-wider">Chat</h3>
+            <div class="w-full lg:w-72 bg-[#000000] border border-[#1F1F1F] flex flex-col shrink-0 h-64 lg:h-auto">
+                <div class="p-4 border-b border-[#1F1F1F] bg-[#050505] flex justify-between items-center">
+                    <h3 class="text-xs font-bold text-[#00E5FF] uppercase tracking-widest">// COMM_LINK</h3>
+                    <div class="w-2 h-2 rounded-full bg-[#00E5FF] animate-pulse"></div>
+                </div>
 
                 <div ref="chatBox"
-                    class="grow overflow-y-auto mb-3 space-y-2 pr-2 scrollbar-thin scrollbar-thumb-gray-600">
-                    <div v-for="(msg, index) in chatMessages" :key="index" class="text-sm">
+                    class="grow overflow-y-auto p-3 space-y-3 font-mono text-xs scrollbar-thin scrollbar-thumb-[#1F1F1F] scrollbar-track-black">
+                    <div v-for="(msg, index) in chatMessages" :key="index" class="wrap-break-word">
                         
-                        <div v-if="msg.isSystem" class="text-center my-2">
-                            <span class="inline-block text-xs bg-gray-700 text-blue-300 px-2 py-1 rounded-lg max-w-full wrap-break-word">
+                        <div v-if="msg.isSystem" class="text-center py-2 opacity-70">
+                            <span class="inline-block border border-[#1F1F1F] text-[#FF0033] px-2 py-1 uppercase tracking-wider text-[10px]">
                                 {{ msg.content }}
                             </span>
                         </div>
 
                         <div v-else>
-                            <span class="font-bold" :class="msg.from === 'You' ? 'text-yellow-400' : 'text-blue-400'">{{
-                                msg.from }}:</span>
-                            <span class="text-gray-300 ml-1">{{ msg.content }}</span>
+                            <span class="font-bold" :class="msg.from === 'You' ? 'text-[#FF0033]' : 'text-[#00E5FF]'">
+                                {{ msg.from === 'You' ? '>> SELF' : `>> ${msg.from}` }}:
+                            </span>
+                            <span class="text-gray-400 ml-1">{{ msg.content }}</span>
                         </div>
                     </div>
                 </div>
 
-                <form @submit.prevent="sendChatMessage" class="flex gap-2 items-center">
-                    <input v-model="chatInput" type="text" placeholder="Guess or chat..."
-                        class="grow min-w-0 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-blue-500" />
-                    <button type="submit" class="shrink-0 w-10 h-10 flex items-center justify-center bg-blue-600 rounded hover:bg-blue-500 text-white">➤</button>
+                <form @submit.prevent="sendChatMessage" class="p-3 bg-[#050505] border-t border-[#1F1F1F] flex gap-2">
+                    <input v-model="chatInput" type="text" placeholder="TRANSMIT..."
+                        class="grow min-w-0 bg-[#1F1F1F] border border-transparent focus:border-[#00E5FF] text-white text-xs px-3 py-2 outline-none font-mono placeholder-gray-600 transition-colors" />
+                    <button type="submit" class="shrink-0 w-8 h-8 flex items-center justify-center bg-[#1F1F1F] hover:bg-[#00E5FF] hover:text-black text-[#00E5FF] transition-colors border border-[#00E5FF]">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    </button>
                 </form>
             </div>
 
