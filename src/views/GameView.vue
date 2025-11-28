@@ -424,7 +424,8 @@ const goHome = () => {
 }
 
 onMounted(() => {
-    dende = new Dende(800, 600)
+    // --- CHANGED: Updated resolution to 1280x720 (16:9 Aspect Ratio) ---
+    dende = new Dende(1280, 720)
 
     if (dendeContainer.value) {
         dendeContainer.value.appendChild(dende.getHTMLElement())
@@ -452,7 +453,7 @@ onUnmounted(() => {
         <div class="absolute top-0 left-0 w-[500px] h-[500px] bg-[#00E5FF] rounded-full mix-blend-screen filter blur-[150px] opacity-5 pointer-events-none"></div>
         <div class="absolute bottom-0 right-0 w-[500px] h-[500px] bg-[#FF0033] rounded-full mix-blend-screen filter blur-[150px] opacity-5 pointer-events-none"></div>
 
-        <div class="w-full max-w-7xl mb-4 relative z-10">
+        <div class="w-full max-w-[1400px] mb-4 relative z-10">
             <div class="flex items-center justify-between p-3 bg-[#000000] border border-[#00E5FF] shadow-[0_0_10px_rgba(0,229,255,0.1)]">
                 <div class="flex items-center gap-2">
                     <div class="w-2 h-2 rounded-full animate-pulse" :class="isConnected ? 'bg-[#00E5FF]' : 'bg-[#FF0033]'"></div>
@@ -463,7 +464,7 @@ onUnmounted(() => {
             </div>
         </div>
 
-        <div class="flex flex-col lg:flex-row w-full max-w-7xl gap-6 relative z-10 h-[85vh]">
+        <div class="flex flex-col lg:flex-row w-full max-w-[1400px] gap-6 relative z-10 h-[85vh]">
 
             <div class="w-full lg:w-64 bg-[#000000] border border-[#1F1F1F] flex flex-col shrink-0">
                 <div class="p-4 border-b border-[#1F1F1F] bg-[#050505]">
@@ -499,7 +500,7 @@ onUnmounted(() => {
             </div>
 
             <div class="grow flex flex-col min-w-0">
-                <div class="relative grow bg-[#050505] border-2 border-[#1F1F1F] flex flex-col">
+                <div class="relative grow bg-[#050505] border-2 border-[#1F1F1F] flex flex-col items-center justify-center">
                     
                     <div class="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-[#FF0033] z-20"></div>
                     <div class="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-[#FF0033] z-20"></div>
@@ -507,8 +508,8 @@ onUnmounted(() => {
                     <div class="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-[#FF0033] z-20"></div>
 
                     <div ref="dendeContainer"
-                        class="w-full h-full cursor-crosshair flex items-center justify-center overflow-hidden"
-                        style="touch-action: none;">
+                        class="cursor-crosshair overflow-hidden shadow-[0_0_20px_rgba(255,255,255,0.1)] bg-white"
+                        style="touch-action: none; max-width: 100%; max-height: 100%;">
                     </div>
 
                     <div v-if="showTurnSummary"
