@@ -81,7 +81,6 @@ export class Dende {
     private undoStack: Array<ImageData> = []
     private redoStack: Array<ImageData> = []
     private readonly MAX_HISTORY = 20;
-
     private canDraw: boolean = true;
 
     constructor(width: number, height: number) {
