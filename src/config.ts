@@ -1,5 +1,5 @@
 // src/config.ts
-export const API_BASE_URL = 'https://api.rakaoran.dev';
+export const API_BASE_URL = 'https://api.gto.rakaoran.dev';
 
 export const endpoints = {
   // Matched to api/internal/authentication/route.go
