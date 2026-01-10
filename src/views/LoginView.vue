@@ -50,50 +50,47 @@ const handleLogin = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-[#1F1F1F] p-4 relative overflow-hidden selection:bg-[#00E5FF] selection:text-black">
+  <div class="min-h-screen flex items-center justify-center bg-[#0F1115] p-4 text-[#E6E6E6] font-sans selection:bg-[#4C8DFF] selection:text-white">
     
-    <div class="absolute top-[-10%] right-[-5%] w-96 h-96 bg-[#FF0033] rounded-full mix-blend-screen filter blur-[128px] opacity-10 animate-pulse"></div>
-    <div class="absolute bottom-[-10%] left-[-5%] w-96 h-96 bg-[#00E5FF] rounded-full mix-blend-screen filter blur-[128px] opacity-10 animate-pulse" style="animation-delay: 1.5s;"></div>
-
-    <div class="w-full max-w-md bg-[#000000] border-2 border-[#1F1F1F] rounded-none shadow-[8px_8px_0px_0px_#00E5FF] relative z-10 transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[12px_12px_0px_0px_#00E5FF]">
+    <div class="w-full max-w-md bg-[#171A21] border border-[#242833] rounded-xl shadow-2xl overflow-hidden">
       
-      <div class="p-8 border-b border-[#1F1F1F]">
-        <h2 class="text-3xl font-black text-white uppercase italic tracking-tighter transform -skew-x-6">
-          Welcome <span class="text-transparent bg-clip-text bg-linear-to-r from-[#00E5FF] to-[#FF0033]">Back</span>
+      <div class="px-8 pt-8 pb-2">
+        <h2 class="text-2xl font-bold text-[#E6E6E6]">
+          Welcome back
         </h2>
-        <p class="text-gray-500 font-mono text-xs mt-2 tracking-widest uppercase">
-          // Resume Session
+        <p class="text-[#A0A4AB] text-sm mt-2">
+          Please enter your details to sign in.
         </p>
       </div>
       
-      <form @submit.prevent="handleLogin" class="p-8 space-y-6">
+      <form @submit.prevent="handleLogin" class="p-8 space-y-5">
         
-        <div v-if="errorMsg" class="p-4 bg-[#6B0000]/20 border border-[#FF0033] text-[#FF0033] text-sm font-mono flex items-center gap-3">
-          <span class="text-xl">⚠️</span>
-          {{ errorMsg }}
+        <div v-if="errorMsg" class="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          <span>{{ errorMsg }}</span>
         </div>
 
-        <div class="group">
-          <label class="block text-[#00E5FF] font-mono text-xs mb-2 uppercase tracking-wider group-focus-within:text-[#FF0033] transition-colors" for="username">
+        <div class="space-y-1.5">
+          <label class="block text-[#E6E6E6] text-sm font-medium" for="username">
             Username
           </label>
           <input 
             v-model="username"
-            class="w-full bg-[#1F1F1F] text-white px-4 py-3 border border-transparent focus:border-[#00E5FF] outline-none font-bold placeholder-gray-600 transition-all duration-200" 
+            class="w-full bg-[#0F1115] text-[#E6E6E6] px-4 py-2.5 border border-[#242833] rounded-lg focus:border-[#4C8DFF] outline-none placeholder-[#A0A4AB] transition-colors" 
             id="username" 
             type="text" 
-            placeholder="ENTER_ID" 
+            placeholder="Enter your username" 
             required
           >
         </div>
         
-        <div class="group">
-          <label class="block text-[#00E5FF] font-mono text-xs mb-2 uppercase tracking-wider group-focus-within:text-[#FF0033] transition-colors" for="password">
+        <div class="space-y-1.5">
+          <label class="block text-[#E6E6E6] text-sm font-medium" for="password">
             Password
           </label>
           <input 
             v-model="password"
-            class="w-full bg-[#1F1F1F] text-white px-4 py-3 border border-transparent focus:border-[#00E5FF] outline-none font-bold placeholder-gray-600 transition-all duration-200" 
+            class="w-full bg-[#0F1115] text-[#E6E6E6] px-4 py-2.5 border border-[#242833] rounded-lg focus:border-[#4C8DFF] outline-none placeholder-[#A0A4AB] transition-colors" 
             id="password" 
             type="password" 
             placeholder="••••••••" 
@@ -102,7 +99,7 @@ const handleLogin = async () => {
         </div>
         
         <button 
-          class="w-full bg-[#FF0033] hover:bg-[#ff1a47] text-black font-black uppercase text-lg py-4 border-2 border-transparent hover:border-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95" 
+          class="w-full bg-[#4C8DFF] hover:bg-[#3b7cdb] text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2 shadow-sm" 
           type="submit"
           :disabled="isLoading"
         >
@@ -110,15 +107,16 @@ const handleLogin = async () => {
         </button>
       </form>
 
-      <div class="p-6 border-t border-[#1F1F1F] bg-[#050505] flex justify-between items-center">
-        <router-link to="/" class="text-xs font-mono text-gray-500 hover:text-white transition-colors">
-          &lt; ABORT
+      <div class="px-8 py-6 border-t border-[#242833] bg-[#121419] flex justify-between items-center text-sm">
+        <router-link to="/" class="text-[#A0A4AB] hover:text-[#E6E6E6] transition-colors flex items-center gap-1">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg>
+          Back
         </router-link>
         
-        <p class="text-xs text-gray-500 font-mono">
-          NO DATA? 
-          <router-link to="/signup" class="text-[#00E5FF] hover:text-white hover:underline ml-1">
-            CREATE_USER
+        <p class="text-[#A0A4AB]">
+          Don't have an account? 
+          <router-link to="/signup" class="text-[#4C8DFF] hover:underline font-medium ml-1">
+            Sign up
           </router-link>
         </p>
       </div>
